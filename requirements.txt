@@ -1,0 +1,11 @@
+flask
+flask-cors
+python-dotenv
+requests
+chromadb
+sentence-transformers
+numpy
+pandas
+beautifulsoup4
+black
+isort
