@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Chewy Chewy AI</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial;
+    background: #343541;
+    color: white;
+}
+
+#chat {
+    max-width: 800px;
+    margin: auto;
+    padding: 20px;
+}
+
+.message {
+    padding: 10px 15px;
+    margin: 10px 0;
+    border-radius: 10px;
+    max-width: 70%;
+}
+
+.user {
+    background: #0b93f6;
+    margin-left: auto;
+}
+
+.bot {
+    background: #444654;
+}
+
+#input-area {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    background: #343541;
+    padding: 10px;
+}
+
+#input-box {
+    max-width: 800px;
+    margin: auto;
+    display: flex;
+}
+
+input {
+    flex: 1;
+    padding: 12px;
+    border-radius: 5px;
+    border: none;
+    font-size: 16px;
+}
+
+button {
+    margin-left: 10px;
+    padding: 12px 20px;
+    background: #19c37d;
+    border: none;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #14a06f;
+}
+
+.loading {
+    font-style: italic;
+    opacity: 0.7;
+}
+</style>
+</head>
+
+<body>
+
+<div id="chat"></div>
+
+<div id="input-area">
+    <div id="input-box">
+        <input id="input" placeholder="Nhập câu hỏi..." onkeydown="if(event.key==='Enter') sendMessage()">
+        <button onclick="sendMessage()">Gửi</button>
+    </div>
+</div>
+
+<script>
+const session_id = "web_" + Math.random();
+const chat = document.getElementById("chat");
+
+function addMessage(role, text) {
+    const div = document.createElement("div");
+    div.className = "message " + role;
+    div.innerText = text;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+}
+
+async function sendMessage() {
+    const input = document.getElementById("input");
+    const query = input.value.trim();
+    if (!query) return;
+
+    addMessage("user", query);
+    input.value = "";
+
+    const loading = document.createElement("div");
+    loading.className = "message bot loading";
+    loading.innerText = "Đang trả lời...";
+    chat.appendChild(loading);
+
+    try {
+        const res = await fetch("http://127.0.0.1:5001/api/v1/chewy_chewy", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                session_id: session_id,
+                query: query
+            })
+        });
+
+        const data = await res.json();
+
+        loading.remove();
+        addMessage("bot", data.content);
+
+    } catch (err) {
+        loading.remove();
+        addMessage("bot", "Lỗi kết nối server 😢");
+    }
+}
+</script>
+
+</body>
+</html>
