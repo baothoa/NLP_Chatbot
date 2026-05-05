@@ -1,0 +1,9 @@
+query,expected_route
+Bên mình có bánh sinh nhật không?,products
+Có bánh chocolate không?,products
+Gợi ý bánh cho sinh nhật bạn gái,products
+Có bánh nào dưới 200k không?,products
+Xin chào bạn,chitchat
+Bạn là ai?,chitchat
+Hôm nay thời tiết sao?,fallback
+Bạn có bán điện thoại không?,fallback
