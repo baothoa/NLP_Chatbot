@@ -1,6 +1,8 @@
 import unittest
-from semantic_router import SemanticRouter, Route
-from semantic_router.samples import productSample, chitchatSample
+
+from semantic_router import Route, SemanticRouter
+from semantic_router.samples import chitchatSample, productSample
+
 
 class RouterTestCase(unittest.TestCase):
     def setUp(self):

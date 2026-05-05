@@ -2,9 +2,10 @@ import json
 import os
 import re
 import time
+from urllib.parse import urljoin
+
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
 
 INPUT_FILE = "json_file/chewychewy_all_urls.json"
 OUTPUT_FILE = "output_files/chewychewy_products.json"

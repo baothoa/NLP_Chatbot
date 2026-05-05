@@ -1,8 +1,9 @@
 import os
 import re
+
 import chromadb
-from dotenv import load_dotenv
 from chromadb.utils import embedding_functions
+from dotenv import load_dotenv
 
 # 1. Load biến môi trường
 

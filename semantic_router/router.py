@@ -1,49 +1,41 @@
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-# phân loại mục đích người dùng
+
 class SemanticRouter:
-    def __init__(self, routes):
+    def __init__(self, routes, threshold=0.45):
         self.routes = routes
-        self.embedding_model = SentenceTransformer("keepitreal/vietnamese-sbert") # khởi tạo model, dùng model để biến text thành vector
-        self.routesEmbedding = {}
-        self.routesEmbeddingCal = {}
+        self.threshold = threshold
+        self.embedding_model = SentenceTransformer("keepitreal/vietnamese-sbert")
+        self.routes_embedding_cal = {}
 
         for route in self.routes:
-            embeddings = self.embedding_model.encode(route.samples) # encode sample (chữ->số)
+            embeddings = self.embedding_model.encode(route.samples)
+            self.routes_embedding_cal[route.name] = self._normalize(embeddings)
 
-            self.routesEmbedding[route.name] = embeddings
-
-            # Chuẩn hóa từng sample riêng biệt
-            self.routesEmbeddingCal[route.name] = embeddings / np.linalg.norm(
-                embeddings,
-                axis=1,
-                keepdims=True
-            )
+    def _normalize(self, vectors):
+        return vectors / np.linalg.norm(vectors, axis=1, keepdims=True)
 
     def get_routes(self):
         return self.routes
 
     def guide(self, query):
-        queryEmbedding = self.embedding_model.encode([query]) # encode query
-
-        # Chuẩn hóa query (chỉnh vector về độ dài =1)
-        queryEmbedding = queryEmbedding / np.linalg.norm(
-            queryEmbedding,
-            axis=1,
-            keepdims=True
-        )
+        query_embedding = self.embedding_model.encode([query])
+        query_embedding = self._normalize(query_embedding)
 
         scores = []
 
         for route in self.routes:
-            routeEmbeddingCal = self.routesEmbeddingCal[route.name]
-
-            # Tính cosine similarity giữa query và samples của route (để so sánh query với tất cả sample của route)
-            score = np.mean(np.dot(routeEmbeddingCal, queryEmbedding.T).flatten())
-
+            route_embeddings = self.routes_embedding_cal[route.name]
+            similarities = np.dot(route_embeddings, query_embedding.T).flatten()
+            score = float(np.max(similarities))
             scores.append((score, route.name))
 
         scores.sort(reverse=True)
 
-        return scores[0]
+        best_score, best_route = scores[0]
+
+        if best_score < self.threshold:
+            return best_score, "fallback"
+
+        return best_score, best_route

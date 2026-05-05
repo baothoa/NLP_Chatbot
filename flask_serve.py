@@ -1,27 +1,32 @@
-from flask import Flask, request, jsonify
+import os
+
+from dotenv import load_dotenv
+from flask import Flask, jsonify, request
 from flask_cors import CORS
+
+from embedding_model import EmbeddingModel
 from ollama_client import OllamaClient
 from rag import RAG
-from semantic_router import SemanticRouter, Route
-from semantic_router.samples import productSample, chitchatSample
 from reflection import Reflection
-from embedding_model import EmbeddingModel
-import os
-from dotenv import load_dotenv
+from semantic_router import Route, SemanticRouter
+from semantic_router.samples import chitchatSample, productSample
 
 load_dotenv()
 
-db_chat_history_collection = os.getenv(
+DB_CHAT_HISTORY_COLLECTION = os.getenv(
     "DB_CHAT_HISTORY_COLLECTION",
-    "chewy_chewy_chat_history"
+    "chewy_chewy_chat_history",
+)
+SEMANTIC_CACHE_COLLECTION = os.getenv(
+    "SEMANTIC_CACHE_COLLECTION",
+    "chewy_chewy_semantic_cache",
 )
 
-semantic_cache_collection = os.getenv(
-    "semanticCacheCollection",
-    "chewy_chewy_semantic_cache"
-)
+DB_PATH = "VECTOR_STORE"
 
-db_path = "VECTOR_STORE"
+PRODUCT_ROUTE_NAME = "products"
+CHITCHAT_ROUTE_NAME = "chitchat"
+FALLBACK_ROUTE_NAME = "fallback"
 
 app = Flask(__name__)
 CORS(app)
@@ -32,22 +37,22 @@ llm = OllamaClient()
 rag = RAG(
     collection1_name="chewy_chewy_aihi_01",
     collection2_name="chewy_chewy_aihi_02",
-    db_path=db_path
+    db_path=DB_PATH,
 )
 
-PRODUCT_ROUTE_NAME = "products"
-CHITCHAT_ROUTE_NAME = "chitchat"
+product_route = Route(name=PRODUCT_ROUTE_NAME, samples=productSample)
+chitchat_route = Route(name=CHITCHAT_ROUTE_NAME, samples=chitchatSample)
 
-productRoute = Route(name=PRODUCT_ROUTE_NAME, samples=productSample)
-chitchatRoute = Route(name=CHITCHAT_ROUTE_NAME, samples=chitchatSample)
-
-semanticRouter = SemanticRouter(routes=[productRoute, chitchatRoute])
+semantic_router = SemanticRouter(
+    routes=[product_route, chitchat_route],
+    threshold=0.45,
+)
 
 reflection = Reflection(
     llm=llm,
-    db_path=db_path,
-    dbChatHistoryCollection=db_chat_history_collection,
-    semanticCacheCollection=semantic_cache_collection
+    db_path=DB_PATH,
+    dbChatHistoryCollection=DB_CHAT_HISTORY_COLLECTION,
+    semanticCacheCollection=SEMANTIC_CACHE_COLLECTION,
 )
 
 
@@ -56,59 +61,89 @@ def chat():
     data = request.get_json(force=True)
 
     session_id = data.get("session_id", "default_session")
-    query = data.get("query", "")
+    query = data.get("query", "").strip()
 
-    if not query.strip():
-        return jsonify({
-            "role": "assistant",
-            "content": "Bạn vui lòng nhập câu hỏi nhé."
-        })
+    if not query:
+        return jsonify(
+            {
+                "role": "assistant",
+                "route": FALLBACK_ROUTE_NAME,
+                "content": "Bạn vui lòng nhập câu hỏi nhé.",
+            }
+        )
 
-    guided_route = semanticRouter.guide(query)[1]
-    print("semantic route:", guided_route)
+    score, guided_route = semantic_router.guide(query)
+    print(f"Semantic route: {guided_route} | Score: {score:.4f}")
 
     if guided_route == PRODUCT_ROUTE_NAME:
-        query_embedding = embedding_model.get_embedding(query)
+        response = handle_product_query(session_id, query)
 
-        source_information = rag.enhance_prompt(query)
-
-        print("\n        SOURCE INFORMATION         ")
-        print(source_information)
-        print("--------------------------------------\n")
-
-        combined_information = (
-            f"Khách hỏi: {query}\n\n"
-            f"Dưới đây là dữ liệu sản phẩm lấy từ hệ thống RAG:\n"
-            f"{source_information}\n\n"
-            f"Yêu cầu trả lời:\n"
-            f"- Chỉ dùng thông tin trong dữ liệu sản phẩm ở trên.\n"
-            f"- Nếu có sản phẩm phù hợp, hãy nêu tên, giá, mô tả ngắn.\n"
-            f"- Nếu dữ liệu có EVENT CAKE thì hiểu đó là bánh sinh nhật.\n"
-            f"- Không tự bịa sản phẩm ngoài dữ liệu.\n"
-            f"- Không nói là không tìm thấy nếu dữ liệu bên trên đã có sản phẩm phù hợp.\n"
-            f"- Trả lời ngắn gọn, thân thiện, dùng xưng hô 'mình' và 'bạn'."
-        )
-
-        response = reflection.chat(
-            session_id=session_id,
-            enhanced_message=combined_information,
-            original_message=query,
-            cache_response=False,
-            query_embedding=query_embedding
-        )
-
-    else:
+    elif guided_route == CHITCHAT_ROUTE_NAME:
         response = reflection.chat(
             session_id=session_id,
             enhanced_message=query,
             original_message=query,
-            cache_response=False
+            cache_response=False,
         )
 
-    return jsonify({
-        "role": "assistant",
-        "content": response
-    })
+    else:
+        response = (
+            "Mình chưa hiểu rõ câu hỏi của bạn. "
+            "Bạn có thể hỏi mình về các loại bánh, giá bánh, mô tả bánh "
+            "hoặc gợi ý bánh cho sinh nhật, tiệc và quà tặng nhé."
+        )
+
+    return jsonify(
+        {
+            "role": "assistant",
+            "route": guided_route,
+            "score": float(score),
+            "content": response,
+        }
+    )
+
+
+def handle_product_query(session_id, query):
+    query_embedding = embedding_model.get_embedding(query)
+    source_information = rag.enhance_prompt(query)
+
+    if not source_information:
+        return "Hiện tại mình chưa tìm thấy sản phẩm phù hợp trong dữ liệu Chewy Chewy."
+
+    combined_information = build_product_prompt(query, source_information)
+
+    return reflection.chat(
+        session_id=session_id,
+        enhanced_message=combined_information,
+        original_message=query,
+        cache_response=False,
+        query_embedding=query_embedding,
+    )
+
+
+def build_product_prompt(query, source_information):
+    return f"""
+Bạn là chatbot tư vấn bán bánh cho tiệm bánh Chewy Chewy.
+
+Câu hỏi của khách hàng:
+{query}
+
+Dữ liệu sản phẩm được truy xuất từ hệ thống RAG:
+{source_information}
+
+Quy tắc trả lời:
+1. Chỉ sử dụng thông tin có trong dữ liệu sản phẩm ở trên.
+2. Không tự tạo tên bánh, giá tiền, kích thước hoặc mô tả không có trong dữ liệu.
+3. Nếu có sản phẩm phù hợp, hãy nêu:
+   - Tên bánh
+   - Giá nếu có
+   - Mô tả ngắn
+   - Vì sao phù hợp với nhu cầu khách hàng
+4. Nếu dữ liệu có EVENT CAKE thì hiểu đó là bánh sinh nhật hoặc bánh cho sự kiện.
+5. Nếu không có dữ liệu phù hợp, hãy nói rõ là hiện chưa có thông tin.
+6. Trả lời bằng tiếng Việt, thân thiện, tự nhiên, dùng xưng hô "mình" và "bạn".
+7. Không trả lời quá dài.
+""".strip()
 
 
 if __name__ == "__main__":

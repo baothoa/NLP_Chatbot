@@ -1,10 +1,11 @@
-import requests
-import xml.etree.ElementTree as ET
 import json
 import os
 import time
-from bs4 import BeautifulSoup
+import xml.etree.ElementTree as ET
 from urllib.parse import urljoin
+
+import requests
+from bs4 import BeautifulSoup
 
 SITEMAP_URLS = [
     "https://chewychewy.vn/sitemap_products_1.xml",
