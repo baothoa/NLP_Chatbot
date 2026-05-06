@@ -2,96 +2,177 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <title>Chewy Chewy AI Chatbot</title>
+
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       font-family: Arial, sans-serif;
-      background: #f8f1ea;
+      background: linear-gradient(135deg, #fff7ef, #f3dfcd);
       margin: 0;
       padding: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
 
     .chat-container {
       width: 430px;
-      margin: 40px auto;
-      background: white;
-      border-radius: 18px;
-      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.15);
+      height: 650px;
+      background: #ffffff;
+      border-radius: 24px;
+      box-shadow: 0 12px 35px rgba(95, 58, 32, 0.25);
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
 
     .chat-header {
-      background: #8b5e3c;
+      background: linear-gradient(135deg, #8b5e3c, #b7794c);
       color: white;
       padding: 18px;
       text-align: center;
-      font-size: 20px;
-      font-weight: bold;
+    }
+
+    .chat-header h2 {
+      margin: 0;
+      font-size: 21px;
+    }
+
+    .chat-header p {
+      margin: 6px 0 0;
+      font-size: 13px;
+      opacity: 0.9;
     }
 
     .chat-box {
-      height: 420px;
-      padding: 16px;
+      flex: 1;
+      padding: 18px;
       overflow-y: auto;
+      background: #fffaf5;
     }
 
     .message {
-      max-width: 80%;
-      padding: 10px 14px;
-      margin-bottom: 12px;
-      border-radius: 14px;
-      line-height: 1.4;
+      max-width: 82%;
+      padding: 11px 14px;
+      margin-bottom: 14px;
+      border-radius: 16px;
+      line-height: 1.45;
+      font-size: 14.5px;
+      animation: fadeIn 0.2s ease-in-out;
     }
 
     .user {
       background: #dceeff;
       margin-left: auto;
+      border-bottom-right-radius: 4px;
     }
 
     .bot {
       background: #f1dfcd;
       margin-right: auto;
+      border-bottom-left-radius: 4px;
+    }
+
+    .route {
+      display: block;
+      margin-top: 6px;
+      font-size: 11px;
+      color: #6b4b36;
+      opacity: 0.8;
+    }
+
+    .typing {
+      font-style: italic;
+      color: #7a5a43;
     }
 
     .input-area {
       display: flex;
-      border-top: 1px solid #ddd;
+      padding: 12px;
+      border-top: 1px solid #ead8c8;
+      background: #ffffff;
+      gap: 8px;
     }
 
     input {
       flex: 1;
-      padding: 14px;
-      border: none;
+      padding: 13px 14px;
+      border: 1px solid #ddd0c4;
+      border-radius: 18px;
       outline: none;
-      font-size: 15px;
+      font-size: 14px;
+    }
+
+    input:focus {
+      border-color: #8b5e3c;
     }
 
     button {
-      padding: 14px 20px;
+      padding: 0 18px;
       border: none;
+      border-radius: 18px;
       background: #8b5e3c;
       color: white;
       cursor: pointer;
-      font-size: 15px;
+      font-size: 14px;
+      font-weight: bold;
     }
 
     button:hover {
       background: #70462b;
     }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 500px) {
+      .chat-container {
+        width: 100%;
+        height: 100vh;
+        border-radius: 0;
+      }
+    }
   </style>
 </head>
+
 <body>
   <div class="chat-container">
-    <div class="chat-header">Chewy Chewy AI Chatbot</div>
+    <div class="chat-header">
+      <h2> Chewy Chewy AI</h2>
+      <p>Tư vấn bánh sinh nhật, bánh quà tặng và bánh sự kiện</p>
+    </div>
 
     <div id="chatBox" class="chat-box">
       <div class="message bot">
-        Xin chào, mình là chatbot tư vấn bánh của Chewy Chewy. Bạn muốn tìm bánh gì hôm nay?
+        Xin chào, mình là trợ lý tư vấn của Chewy Chewy!<br />
+        Bạn muốn tìm bánh sinh nhật, bánh chocolate hay bánh làm quà tặng?
+        <small class="route">(route: greeting)</small>
       </div>
     </div>
 
     <div class="input-area">
-      <input id="userInput" type="text" placeholder="Nhập câu hỏi..." />
+      <input
+        id="userInput"
+        type="text"
+        placeholder="Nhập câu hỏi của bạn..."
+        autocomplete="off"
+      />
       <button onclick="sendMessage()">Gửi</button>
     </div>
   </div>
@@ -99,15 +180,33 @@
   <script>
     const sessionId = "demo_session";
 
+    function addMessage(content, type, route = null) {
+      const chatBox = document.getElementById("chatBox");
+
+      const routeText = route
+        ? `<small class="route">(route: ${route})</small>`
+        : "";
+
+      chatBox.innerHTML += `
+        <div class="message ${type}">
+          ${content}
+          ${routeText}
+        </div>
+      `;
+
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
     async function sendMessage() {
       const input = document.getElementById("userInput");
-      const chatBox = document.getElementById("chatBox");
       const query = input.value.trim();
 
       if (!query) return;
 
-      chatBox.innerHTML += `<div class="message user">${query}</div>`;
+      addMessage(query, "user");
       input.value = "";
+
+      addMessage("Mình đang tìm bánh phù hợp cho bạn...", "bot", "loading");
 
       try {
         const response = await fetch("http://localhost:5001/api/v1/chewy_chewy", {
@@ -123,10 +222,23 @@
 
         const data = await response.json();
 
-        chatBox.innerHTML += `<div class="message bot">${data.content}</div>`;
-        chatBox.scrollTop = chatBox.scrollHeight;
+        const chatBox = document.getElementById("chatBox");
+        chatBox.lastElementChild.remove();
+
+        let imageHtml = "";
+
+        if (data.images && data.images.length > 0) {
+          imageHtml = data.images
+            .map(url => `<img src="${url}" style="max-width:100%; border-radius:12px; margin-top:10px;">`)
+            .join("");
+        }
+
+        addMessage(data.content + imageHtml, "bot", data.route);
       } catch (error) {
-        chatBox.innerHTML += `<div class="message bot">Không kết nối được server Flask.</div>`;
+        const chatBox = document.getElementById("chatBox");
+        chatBox.lastElementChild.remove();
+
+        addMessage("Không kết nối được server Flask. Bạn kiểm tra lại backend nhé.", "bot", "error");
       }
     }
 

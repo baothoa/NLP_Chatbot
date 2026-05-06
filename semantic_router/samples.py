@@ -1,78 +1,113 @@
-productSample = [
-    "Tôi muốn mua bánh",
-    "Tôi muốn mua bánh sinh nhật",
-    "Bạn có bánh sinh nhật nào không?",
-    "Tôi muốn đặt bánh cho tiệc sinh nhật",
-    "Có bánh nào phù hợp để tặng sinh nhật không?",
-    "Tôi muốn mua bánh tặng bạn gái",
-    "Tôi muốn mua bánh tặng mẹ",
-    "Tôi muốn mua bánh tặng người yêu",
-    "Có bánh nào phù hợp để tặng bạn bè không?",
-    "Bánh nào phù hợp để tặng đồng nghiệp?",
-    "Tôi muốn mua bánh cho buổi tiệc",
-    "Tôi cần bánh cho sự kiện công ty",
-    "Có bánh nào dùng cho tiệc cưới không?",
-    "Tôi muốn đặt EVENT CAKE",
-    "Giá EVENT CAKE S02 bao nhiêu?",
-    "Bạn có bánh EVENT CAKE S06 không?",
-    "Tôi muốn mua set bánh mini",
-    "Có set bánh mini nào ngon không?",
-    "Tôi muốn đặt SET MINI VANILLA",
-    "Tôi muốn mua SET MINI CHOCOLATE",
-    "Có SET MINI DORAEMON không?",
-    "Tôi muốn mua bánh su medium",
-    "Có bánh su vị chocolate không?",
-    "Có bánh su vị vanilla không?",
-    "Có bánh vị trà xanh không?",
-    "Có bánh topping phô mai không?",
-    "Có bánh vị dâu không?",
-    "Có bánh vị xoài không?",
-    "Bánh nào là best seller?",
-    "Shop gợi ý giúp tôi vài loại bánh ngon",
-    "Tôi muốn xem danh sách bánh",
-    "Bánh nào phù hợp để làm quà?",
-    "Tôi muốn mua bánh cho người lớn tuổi",
-    "Có bánh nào phù hợp cho trẻ em không?",
-    "Tôi muốn đặt bánh cho lễ kỷ niệm",
-    "Có bánh nào phù hợp dịp Tết không?",
-    "Tôi muốn mua bánh để biếu ông bà",
-    "Tôi muốn mua bánh chúc mừng tốt nghiệp",
-    "Có bánh nào đẹp để trang trí bàn tiệc không?",
-    "Tư vấn giúp tôi một loại bánh phù hợp"
-]
+# semantic_router/samples.py
 
+# =========================
+# CHITCHAT SAMPLES
+# =========================
 
 chitchatSample = [
-    "Xin chào",
-    "Chào bạn",
-    "Hi",
-    "Hello",
-    "Hello shop",
-    "Chào shop",
-    "Bạn có khỏe không?",
-    "Hôm nay bạn thế nào?",
-    "Bạn đang làm gì vậy?",
-    "Bạn có thể trò chuyện với tôi không?",
-    "Bạn có thể kể chuyện vui không?",
-    "Bạn có thể giúp tôi thư giãn không?",
-    "Bạn làm việc ở đây lâu chưa?",
-    "Bạn có thích nói chuyện với khách hàng không?",
-    "Bạn có điều gì thú vị muốn chia sẻ không?",
-    "Bạn có thể kể về cửa hàng không?",
-    "Bạn có lời khuyên nào để có một ngày vui không?",
-    "Bạn thích làm gì lúc rảnh?",
-    "Bạn có sở thích gì không?",
-    "Bạn có tin vào may mắn không?",
-    "Bạn có thể đề xuất một quyển sách hay không?",
-    "Bạn có thể kể một câu chuyện ngắn không?",
-    "Công việc ở cửa hàng có thú vị không?",
-    "Bạn có gặp khách hàng dễ thương nào không?",
-    "Bạn thích làm việc một mình hay làm việc nhóm?",
-    "Bạn có thói quen nào vào buổi sáng không?",
-    "Bạn nghĩ gì về mùa xuân?",
-    "Bạn có thể nói chuyện với tôi một chút không?",
-    "Bạn có thể động viên tôi không?",
-    "Cảm ơn bạn nhé",
-    "Tạm biệt",
-    "Hẹn gặp lại"
+    # greetings
+    "xin chào",
+    "hello",
+    "hi",
+    "chào bạn",
+    "chào shop",
+    "alo",
+    "bên bạn có ai không",
+
+    # identity questions
+    "bạn là ai",
+    "bạn là ai vậy",
+    "bạn là chatbot à",
+    "bạn có phải ai không",
+    "bạn có phải AI không",
+    "bạn là người hay máy",
+    "bạn làm được gì",
+    "bạn có thể giúp gì",
+    "bạn hỗ trợ những gì",
+    "bạn có chức năng gì",
+
+    # small talk
+    "hôm nay bạn thế nào",
+    "bạn khỏe không",
+    "cảm ơn bạn",
+    "thanks",
+    "ok cảm ơn",
+    "bye",
+    "tạm biệt",
+    "hẹn gặp lại",
+    "chúc bạn ngày tốt lành",
+    "bạn dễ thương quá",
+    "bạn nói chuyện hay quá",
+]
+
+# =========================
+# PRODUCT SAMPLES (bánh)
+# =========================
+
+productSample = [
+    # general product intent
+    "có bánh gì",
+    "có những loại bánh nào",
+    "menu bánh",
+    "shop có bán bánh gì",
+    "tiệm có bánh gì",
+
+    # birthday / event cakes
+    "bánh sinh nhật",
+    "có bánh sinh nhật không",
+    "bánh cho sinh nhật",
+    "bánh cho tiệc sinh nhật",
+    "bánh event cake",
+    "bánh cho sự kiện",
+
+    # chocolate
+    "bánh chocolate",
+    "có bánh chocolate không",
+    "bánh socola",
+    "bánh vị chocolate",
+
+    # price / filtering
+    "bánh giá bao nhiêu",
+    "giá bánh",
+    "bánh dưới 200k",
+    "bánh giá rẻ",
+    "có bánh nào rẻ không",
+    "bánh tầm 100k",
+    "bánh tầm 200k",
+
+    # recommendation
+    "gợi ý bánh",
+    "tư vấn bánh",
+    "chọn bánh giúp mình",
+    "gợi ý bánh sinh nhật",
+    "gợi ý bánh cho bạn gái",
+    "gợi ý bánh cho người yêu",
+    "gợi ý bánh làm quà",
+    "nên mua bánh nào",
+
+    # buying intent
+    "mua bánh",
+    "đặt bánh",
+    "order bánh",
+    "cách mua bánh",
+    "đặt bánh như thế nào",
+    "shop có giao bánh không",
+    "ship bánh không",
+
+    # detailed product queries
+    "bánh có vị gì",
+    "bánh có size gì",
+    "bánh có kích thước gì",
+    "bánh có bao nhiêu loại",
+    "bánh có ngon không",
+    "bánh có những vị nào",
+    "chewy chewy là gì",
+    "tiệm mình bán gì",
+    "shop mình bán gì",
+    "bánh nào bán chạy",
+    "bánh nào phù hợp sinh nhật",
+    "bánh nào phù hợp tặng người yêu",
+    "bánh nào phù hợp cho tiệc",
+    "bánh nào ngon nhất",
+    "bánh nào được đề xuất",
 ]
