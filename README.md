@@ -1,81 +1,38 @@
-# Chewy Chewy AI Chatbot
+# Vietnamese Product Consultant Chatbot using RAG and Semantic Router
 
-Đây là đồ án môn Xử lý ngôn ngữ tự nhiên xây dựng chatbot tư vấn bán bánh cho tiệm bánh Chewy Chewy.
+## 1. Giới thiệu
+Đây là đồ án môn NLP xây dựng chatbot tư vấn sản phẩm bánh ngọt cho cửa hàng Chewy Chewy. Hệ thống sử dụng RAG để truy xuất thông tin sản phẩm và LLM local thông qua Ollama để sinh câu trả lời tự nhiên bằng tiếng Việt.
 
-## Chức năng chính
+## 2. Mục tiêu
+- Phân loại ý định người dùng: hỏi sản phẩm hoặc trò chuyện thông thường.
+- Truy xuất sản phẩm phù hợp từ vector database.
+- Sinh câu trả lời ngắn gọn, thân thiện, không bịa thông tin.
+- Hỗ trợ hội thoại nhiều lượt thông qua session_id.
 
-- Tư vấn sản phẩm bánh dựa trên dữ liệu Chewy Chewy.
-- Phân loại câu hỏi bằng Semantic Router.
-- Truy xuất thông tin sản phẩm bằng RAG và ChromaDB.
-- Sinh câu trả lời bằng Ollama LLM.
-- Có giao diện web HTML để người dùng chat.
-- Có fallback để xử lý câu hỏi ngoài phạm vi.
+## 3. Kiến trúc hệ thống
 
-## Công nghệ sử dụng
+User Query
+→ Semantic Router
+→ Product Route / Chitchat Route
+→ RAG Retrieval
+→ Prompt Construction
+→ Ollama LLM
+→ Response
 
+## 4. Công nghệ sử dụng
 - Python
 - Flask
 - ChromaDB
-- SentenceTransformers
-- Vietnamese SBERT
+- SentenceTransformer
+- keepitreal/vietnamese-sbert
 - Ollama llama3.2
 - HTML/CSS/JavaScript
 
-## Kiến trúc hệ thống
-
-User Query → Semantic Router → RAG Retrieval → Prompt → Ollama LLM → Response
-
-Nếu câu hỏi không liên quan đến sản phẩm hoặc hội thoại thông thường, hệ thống trả về fallback response.
-
-## Cách cài đặt
+## 5. Cách cài đặt
 
 ```bash
+git clone https://github.com/baothoa/NLP_Chatbot.git
+cd NLP_Chatbot
+python -m venv venv
+venv\Scripts\activate
 pip install -r requirements.txt
-```
-
-## Cách chạy
-
-Chạy Ollama:
-
-```bash
-ollama run llama3.2
-```
-
-Chạy Flask:
-
-```bash
-python flask_serve.py
-```
-
-Mở file:
-
-```txt
-chat.html
-```
-
-## API
-
-Endpoint:
-
-```txt
-POST /api/v1/chewy_chewy
-```
-
-Body:
-
-```json
-{
-  "session_id": "demo_session",
-  "query": "Bên mình có bánh sinh nhật không?"
-}
-```
-
-## Đánh giá Semantic Router
-
-```bash
-python evaluation/evaluate_router.py
-```
-
-## Điểm nổi bật
-
-Hệ thống không chỉ gọi LLM trực tiếp mà kết hợp Semantic Router, Vietnamese Sentence Embedding, RAG và Fallback Mechanism. Cách tiếp cận này giúp chatbot trả lời có căn cứ trên dữ liệu sản phẩm và giảm hiện tượng hallucination.
