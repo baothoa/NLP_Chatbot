@@ -227,8 +227,8 @@
 
         let imageHtml = "";
 
-        if (data.images && data.images.length > 0) {
-          imageHtml = data.images
+        if (data.products && data.products.length > 0) {
+          imageHtml = data.products
             .map(url => `<img src="${url}" style="max-width:100%; border-radius:12px; margin-top:10px;">`)
             .join("");
         }

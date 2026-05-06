@@ -11,6 +11,15 @@ from reflection import Reflection
 from semantic_router import Route, SemanticRouter
 from semantic_router.samples import chitchatSample, productSample
 
+from guards.product_guard import is_product_found
+from guards.scope_guard import (
+    is_related_to_bakery,
+    detect_unsupported_info,
+    out_of_scope_response,
+    unsupported_info_response,
+)
+from response_builder.product_card import build_product_cards_from_context
+
 load_dotenv()
 
 DB_CHAT_HISTORY_COLLECTION = os.getenv(
@@ -80,58 +89,99 @@ def chat():
                 "route": FALLBACK_ROUTE_NAME,
                 "score": 0.0,
                 "content": "Bạn vui lòng nhập câu hỏi nhé.",
+                "products": [],
             }
         )
 
-    score, guided_route = semantic_router.guide(query)
-
     print(f"Query: {query}")
+
+    # 1. Semantic router chạy trước để nhận chitchat nhẹ
+    score, guided_route = semantic_router.guide(query)
     print(f"Semantic route: {guided_route} | Score: {score:.4f}")
 
-    images = []
+    # 2. Cho phép chào hỏi / cảm ơn
+    if guided_route == CHITCHAT_ROUTE_NAME:
+        response = handle_chitchat_query(session_id, query)
 
+        return jsonify(
+            {
+                "role": "assistant",
+                "route": guided_route,
+                "score": float(score),
+                "content": response,
+                "products": [],
+            }
+        )
+
+    # 3. Chặn câu hỏi ngoài phạm vi
+    if not is_related_to_bakery(query):
+        return jsonify(
+            {
+                "role": "assistant",
+                "route": "out_of_scope",
+                "score": 0.0,
+                "content": out_of_scope_response(),
+                "products": [],
+            }
+        )
+
+    # 4. Chặn thông tin chưa có trong data
+    unsupported_keyword = detect_unsupported_info(query)
+    if unsupported_keyword:
+        return jsonify(
+            {
+                "role": "assistant",
+                "route": "unsupported_info",
+                "score": 0.0,
+                "content": unsupported_info_response(unsupported_keyword),
+                "products": [],
+            }
+        )
+
+    # 5. Xử lý câu hỏi sản phẩm
     if guided_route == PRODUCT_ROUTE_NAME:
         result = handle_product_query(session_id, query)
 
-        if isinstance(result, dict):
-            response = result["answer"]
-            images = result["images"]
-        else:
-            response = result
+        return jsonify(
+            {
+                "role": "assistant",
+                "route": guided_route,
+                "score": float(score),
+                "content": result["answer"],
+                "products": result["products"],
+            }
+        )
 
-    elif guided_route == CHITCHAT_ROUTE_NAME:
-        response = handle_chitchat_query(session_id, query)
-
-    else:
-        response = handle_fallback_query()
-
+    # 6. Fallback
     return jsonify(
         {
             "role": "assistant",
-            "route": guided_route,
+            "route": FALLBACK_ROUTE_NAME,
             "score": float(score),
-            "content": response,
-            "images": images,
+            "content": handle_fallback_query(),
+            "products": [],
         }
     )
 
 
 def handle_product_query(session_id, query):
-    
     query_embedding = embedding_model.get_embedding(query)
+
     source_information = rag.enhance_prompt(query)
 
     print("RAG context:\n", source_information)
 
-    if "sinh nhật" in query.lower() and "EVENT CAKE" not in source_information:
-        source_information += "\nTên bánh: EVENT CAKE\nMô tả: Bánh sinh nhật cho sự kiện, trang trí đẹp, phù hợp cho các dịp đặc biệt"
+    if not is_product_found(source_information):
+        fallback_context = rag.enhance_prompt("bánh bán chạy phù hợp để tặng")
+        fallback_products = build_product_cards_from_context(fallback_context)
 
-    if not source_information:
-        return (
-            "Hiện tại mình chưa tìm thấy thông tin sản phẩm phù hợp trong dữ liệu "
-            "của Chewy Chewy. Bạn có thể mô tả rõ hơn loại bánh, dịp sử dụng "
-            "hoặc khoảng giá mong muốn nhé."
-        )
+        return {
+            "answer": (
+                "Dạ hiện tại mình chưa tìm thấy sản phẩm này trong dữ liệu Chewy Chewy ạ. "
+                "Bạn có thể tham khảo một vài mẫu bánh đang có bên dưới nhé."
+            ),
+            "products": fallback_products,
+        }
 
     product_prompt = build_product_prompt(query, source_information)
 
@@ -143,41 +193,95 @@ def handle_product_query(session_id, query):
         query_embedding=query_embedding,
     )
 
+    product_cards = build_product_cards_from_context(source_information)
+
     return {
         "answer": answer,
-        "images": extract_image_urls(source_information),
+        "products": product_cards,
     }
-def extract_image_urls(source_information):
-    image_urls = []
 
-    for line in source_information.splitlines():
-        if line.startswith("Hình ảnh:"):
-            url = line.replace("Hình ảnh:", "").strip()
-
-            if url:
-                image_urls.append(url)
-
-    return image_urls[:3]
 
 def handle_chitchat_query(session_id, query):
+    query_lower = query.lower().strip()
+
+    # ===== GREETING =====
+    greeting_words = [
+        "xin chào",
+        "hello",
+        "hi",
+        "hey",
+        "chào"
+    ]
+
+    if any(word in query_lower for word in greeting_words):
+        return (
+            "Xin chào bạn 👋 "
+            "Mình là trợ lý tư vấn của Chewy Chewy. "
+            "Bạn muốn tìm bánh sinh nhật, bánh chocolate "
+            "hay bánh làm quà tặng ạ?"
+        )
+
+    # ===== THANKS =====
+    thanks_words = [
+        "cảm ơn",
+        "thanks",
+        "thank you"
+    ]
+
+    if any(word in query_lower for word in thanks_words):
+        return (
+            "Dạ không có gì ạ 😊 "
+            "Bạn cần mình gợi ý thêm mẫu bánh nào không?"
+        )
+
+    # ===== BYE =====
+    bye_words = [
+        "bye",
+        "tạm biệt",
+        "hẹn gặp lại"
+    ]
+
+    if any(word in query_lower for word in bye_words):
+        return (
+            "Dạ cảm ơn bạn đã ghé Chewy Chewy 💖 "
+            "Chúc bạn một ngày thật ngọt ngào nhé!"
+        )
+
+    # ===== LLM FALLBACK =====
     chitchat_prompt = f"""
-Bạn là chatbot tư vấn bán bánh của tiệm Chewy Chewy.
+Bạn là nhân viên tư vấn bánh của Chewy Chewy.
 
 Khách hàng nói:
 {query}
 
-Hãy trả lời ngắn gọn, thân thiện và tự nhiên.
-Nếu phù hợp, hãy gợi ý khách có thể hỏi về bánh sinh nhật, bánh chocolate,
-giá bánh hoặc bánh làm quà tặng.
-Không bịa thông tin sản phẩm cụ thể nếu không có dữ liệu.
+Hãy trả lời:
+- ngắn gọn
+- tự nhiên
+- thân thiện
+- giống nhân viên thật
+
+Không được:
+- nói về AI
+- nói về hệ thống
+- nói về RAG
+- nói về database
+
+Nếu phù hợp, hãy nhẹ nhàng gợi ý khách xem bánh sinh nhật,
+bánh chocolate hoặc bánh làm quà tặng.
 """.strip()
 
-    return reflection.chat(
-        session_id=session_id,
-        enhanced_message=chitchat_prompt,
-        original_message=query,
-        cache_response=False,
-    )
+    try:
+        return reflection.chat(
+            session_id=session_id,
+            enhanced_message=chitchat_prompt,
+            original_message=query,
+            cache_response=False,
+        )
+
+    except Exception:
+        return (
+            "Mình có thể hỗ trợ bạn tư vấn bánh của Chewy Chewy ạ 😊"
+        )
 
 
 def handle_fallback_query():
@@ -190,47 +294,59 @@ def handle_fallback_query():
 
 def build_product_prompt(query, source_information):
     return f"""
-Bạn là nhân viên tư vấn bán bánh của tiệm Chewy Chewy.
+Bạn là nhân viên tư vấn bánh của Chewy Chewy.
 
-Phong cách trả lời:
-- Thân thiện, tự nhiên, giống nhân viên tư vấn thật
-- Xưng "mình" và "bạn"
-- Có thể dùng emoji nhẹ nếu phù hợp
-- Ngắn gọn, rõ ràng, dễ đọc
+KHÔNG được trả lời như AI chatbot.
 
-Câu hỏi của khách:
+Phong cách:
+- ngắn gọn
+- tự nhiên
+- giống nhân viên bán bánh thật
+- không lan man
+- không dùng từ sáo rỗng
+
+Khách hỏi:
 {query}
 
-Thông tin sản phẩm từ hệ thống:
+Thông tin sản phẩm:
 {source_information}
 
-Yêu cầu trả lời:
+Quy tắc cực kỳ quan trọng:
 
-1. Nếu có sản phẩm phù hợp:
-   - Giới thiệu tự nhiên, không liệt kê quá khô
-   - Nêu tên bánh, giá nếu có và mô tả ngắn
-   - Thêm 1 câu gợi ý phù hợp với nhu cầu khách
+1. CHỈ được tư vấn dựa trên thông tin sản phẩm ở trên.
 
-2. Nếu có nhiều lựa chọn:
-   - Gợi ý 2–3 bánh tiêu biểu
+2. Nếu có sản phẩm:
+- giới thiệu tối đa 2-3 sản phẩm
+- nói ngắn gọn
+- nêu:
+  + tên bánh
+  + giá nếu có
+  + điểm nổi bật
 
-3. Nếu không có sản phẩm phù hợp:
-   - Trả lời nhẹ nhàng:
-     "Hiện tại mình chưa thấy mẫu bánh phù hợp, bạn có thể cho mình biết thêm về nhu cầu không?"
+3. KHÔNG được:
+- nói "AI"
+- nói "RAG"
+- nói "dữ liệu"
+- nói "hệ thống"
+- nói dài dòng
+- nói sáo rỗng
+- nói như trợ lý ảo
 
-4. Tuyệt đối:
-   - Không bịa thông tin
-   - Không nói về hệ thống, AI, RAG, database
-   - Không trả lời dài quá 5–6 dòng
+4. Nếu khách hỏi bánh sinh nhật:
+- ưu tiên EVENT CAKE nếu có
 
-5. Luôn kết thúc bằng 1 câu gợi ý tiếp, mang tính tư vấn hoặc upsell nhẹ.
+5. Nếu không có sản phẩm phù hợp:
+hãy trả lời đúng câu này:
 
-Ví dụ cách trả lời:
+"Hiện tại bên mình chưa có mẫu bánh này ạ 😢
+Bạn có thể tham khảo một số mẫu bánh khác bên dưới nhé."
 
-"Hiện bên mình có bánh Chocolate Cake khá phù hợp cho sinh nhật.
-Bánh có vị chocolate đậm, trang trí đẹp, rất hợp tặng bạn gái.
+6. Câu trả lời tối đa 4 dòng.
 
-Nếu bạn muốn bánh nhẹ hơn, mình có thể gợi ý thêm vài mẫu khác nhé"
+7. Kết thúc bằng đúng 1 câu gợi ý ngắn.
+Ví dụ:
+- "Bạn thích vị chocolate hay matcha hơn ạ?"
+- "Bạn muốn mình gợi ý thêm mẫu mini không?"
 """.strip()
 
 

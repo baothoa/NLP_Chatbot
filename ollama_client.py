@@ -4,7 +4,7 @@ import requests
 class OllamaClient:
     def __init__(self, api_key=None):
         self.url = "http://localhost:11434/api/chat"
-        self.model = "llama3.2"
+        self.model = "qwen2.5:0.5b"
 
     def chat(self, messages):
         try:
