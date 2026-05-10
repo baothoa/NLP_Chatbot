@@ -4,6 +4,6 @@ from typing import List, Optional
 
 
 class Route:
-    def __init__(self, name: str = None, samples: Optional[List[str]] = None):
+    def __init__(self, name, samples):
         self.name = name
-        self.samples = samples or []
+        self.samples = samples
