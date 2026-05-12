@@ -36,9 +36,9 @@ import os, pathlib
 
 # ── Tự tìm file CSV ở nhiều vị trí phổ biến ──────────────────────────────────
 _CSV_CANDIDATES = [
-    "ragas_questions_v3.csv",
-    "evaluation/ragas_questions_v3.csv",
-    "NLP/evaluation/ragas_question_v3.csv",
+    "ragas_questions_clean.csv",
+    "evaluation/ragas_questions_clean.csv",
+    "NLP/evaluation/ragas_question_clean.csv",
 ]
 
 def _find_csv() -> str:
