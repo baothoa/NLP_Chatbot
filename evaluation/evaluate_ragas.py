@@ -36,10 +36,9 @@ import os, pathlib
 
 # ── Tự tìm file CSV ở nhiều vị trí phổ biến ──────────────────────────────────
 _CSV_CANDIDATES = [
-    "ragas_questions.csv",
-    "ragas_test_data.csv",
-    "evaluation/ragas_questions.csv",
-    "NLP1/evaluation/ragas_questions.csv",
+    "ragas_questions_v3.csv",
+    "evaluation/ragas_questions_v3.csv",
+    "NLP/evaluation/ragas_question_v3.csv",
 ]
 
 def _find_csv() -> str:
@@ -62,12 +61,12 @@ INPUT_CSV        = _find_csv()
 OUTPUT_CSV       = "ragas_result.csv"
 CHART_PNG        = "ragas_chart.png"
 OLLAMA_BASE_URL = "http://localhost:11434"
-EMBED_MODEL      = "nomic-embed-text"      # model embedding
+EMBED_MODEL      = "nomic-embed-text:latest"      # model embedding
 
 # ── Tự chọn LLM judge từ các model đã pull ───────────────────────────────────
 # Ưu tiên theo thứ tự: llama3 → mistral → phi3 → gemma → bất kỳ model nào có
-_LLM_PREFER = ["qwen2", "llama3", "mistral", "phi3", "gemma", "llava"]
-LLM_MODEL   = None  # sẽ được resolve ở check_ollama_models()
+_LLM_PREFER = ["llama3.2:latest", "qwen2.5:0.5b"]
+LLM_MODEL   = "qwen2.5:0.5b"  # sẽ được resolve ở check_ollama_models()
 
 # ─── Tiện ích Ollama ──────────────────────────────────────────────────────────
 
@@ -80,12 +79,12 @@ def _post(endpoint: str, payload: dict, timeout: int = 120) -> dict:
         return r.json()
     except requests.exceptions.ConnectionError:
         sys.exit(
-            "\n❌  Không kết nối được Ollama!\n"
+            "\n  Không kết nối được Ollama!\n"
             "    Hãy chạy:  ollama serve\n"
             "    rồi thử lại script."
         )
     except requests.exceptions.HTTPError as e:
-        sys.exit(f"\n❌  Ollama HTTP error: {e}\n    Response: {r.text}")
+        sys.exit(f"\n  Ollama HTTP error: {e}\n    Response: {r.text}")
 
 
 def embed(text: str) -> List[float]:
@@ -232,23 +231,19 @@ def check_ollama_models() -> None:
         avail = [m["name"] for m in tags.get("models", [])]
     except requests.exceptions.ConnectionError:
         sys.exit(
-            "\n❌  Không kết nối được Ollama!\n"
+            "\n  Không kết nối được Ollama!\n"
             "    Hãy chạy:  ollama serve\n"
             "    rồi thử lại script.\n"
         )
     except Exception as e:
-        print(f"⚠️  Không thể kiểm tra model: {e}. Dùng mặc định llama3.\n")
-        LLM_MODEL = "llama3"
+        print(f"  Không thể kiểm tra model: {e}. Dùng mặc định llama3.\n")
+        LLM_MODEL = "qwen2.5:0.5b"
         return
 
     # Tự chọn LLM judge từ danh sách ưu tiên
     for preferred in _LLM_PREFER:
-        for model_name in avail:
-            if model_name.startswith(preferred):
-                LLM_MODEL = model_name
-                break
-
-        if LLM_MODEL is not None:
+        if preferred in avail:
+            LLM_MODEL = preferred
             break
 
     if LLM_MODEL is None:
@@ -258,7 +253,7 @@ def check_ollama_models() -> None:
             LLM_MODEL = others[0]
         else:
             sys.exit(
-                "\n❌  Không tìm thấy LLM model nào trong Ollama!\n"
+                "\n  Không tìm thấy LLM model nào trong Ollama!\n"
                 "    Chạy một trong các lệnh sau để cài:\n"
                 "      ollama pull llama3      (khuyên dùng, ~4.7GB)\n"
                 "      ollama pull mistral     (~4.1GB)\n"
@@ -267,19 +262,19 @@ def check_ollama_models() -> None:
             )
 
     # Kiểm tra embed model
-    if not any(model.startswith(EMBED_MODEL) for model in avail):
+    if EMBED_MODEL not in avail:
         sys.exit(
-            f"\n❌  Chưa pull embedding model '{EMBED_MODEL}'!\n"
+            f"\n  Chưa pull embedding model '{EMBED_MODEL}'!\n"
             f"    Chạy:  ollama pull {EMBED_MODEL}\n"
         )
 
-    print(f"✅  Embedding model : {EMBED_MODEL}")
-    print(f"✅  LLM judge       : {LLM_MODEL}  (tự chọn từ danh sách đã pull)\n")
+    print(f"  Embedding model : {EMBED_MODEL}")
+    print(f"  LLM judge       : {LLM_MODEL}  (tự chọn từ danh sách đã pull)\n")
 
 
 def main() -> None:
     print("=" * 62)
-    print("  🍰  RAGAS Evaluation — Powered by Ollama (no OpenAI)  🍰")
+    print("    RAGAS Evaluation — Powered by Ollama (no OpenAI)  ")
     print("=" * 62 + "\n")
 
     # 1. Kiểm tra Ollama & model
@@ -293,7 +288,7 @@ def main() -> None:
     required = {"question", "answer", "contexts", "ground_truth"}
     missing_cols = required - set(df.columns)
     if missing_cols:
-        sys.exit(f"❌  File CSV thiếu cột: {missing_cols}")
+        sys.exit(f"  File CSV thiếu cột: {missing_cols}")
 
     df["contexts_list"] = df["contexts"].apply(parse_contexts)
     n = len(df)
@@ -348,7 +343,7 @@ def main() -> None:
 
     print("[3/5] Kết quả tổng quan:\n")
     print("=" * 58)
-    print("  📊  RAGAS — Điểm trung bình toàn dataset")
+    print("    RAGAS — Điểm trung bình toàn dataset")
     print("=" * 58)
     for name, score in avgs.items():
         bar = "█" * int(score * 24) + "░" * (24 - int(score * 24))
@@ -413,7 +408,7 @@ def main() -> None:
     plt.show()
     print(f"      → Đã lưu biểu đồ.\n")
 
-    print("✅  Hoàn tất!")
+    print("  Hoàn tất!")
     print(f"   • Kết quả chi tiết : {OUTPUT_CSV}")
     print(f"   • Biểu đồ          : {CHART_PNG}")
     print()
